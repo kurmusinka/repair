@@ -577,7 +577,7 @@
     <button class="tab" data-cat="Материалы" onclick="filterCat(this)">Материалы</button>
     <button class="tab" data-cat="Работы" onclick="filterCat(this)">Работы</button>
     <button class="tab" data-cat="Мебель" onclick="filterCat(this)">Мебель</button>
-    <button class="tab" data-cat="Техника" onclick="filterCat(this)">Техника</button>
+    <button class="tab" data-cat="Оборудование" onclick="filterCat(this)">Оборудование</button>
     <button class="tab" data-cat="Прочее" onclick="filterCat(this)">Прочее</button>
   </div>
 
@@ -593,7 +593,7 @@
         <option>Материалы</option>
         <option>Работы</option>
         <option>Мебель</option>
-        <option>Техника</option>
+        <option>Оборудование</option>
         <option>Прочее</option>
       </select>
     </div>
@@ -739,7 +739,7 @@ function render() {
   document.getElementById('progressFill').style.width = pct + '%';
 
   // chart
-  const cats = ['Материалы','Работы','Мебель','Техника','Прочее'];
+  const cats = ['Материалы','Работы','Мебель','Оборудование','Прочее'];
   const catTotals = cats.map(c => ({ c, v: items.filter(i=>i.cat===c).reduce((s,i)=>s+i.price,0) })).filter(x=>x.v>0);
   const maxV = catTotals.length ? Math.max(...catTotals.map(x=>x.v)) : 1;
   const chartEl = document.getElementById('chartBars');
