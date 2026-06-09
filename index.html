@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ремонт — Калькулятор</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1915;
+    --card: #211f1a;
+    --border: #2e2c26;
+    --accent: #e8c97e;
+    --accent2: #c4753a;
+    --text: #f0ead8;
+    --muted: #7a7464;
+    --green: #6dbf8a;
+    --red: #e07070;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Onest', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* BUDGET OVERVIEW */
+  .overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .overview-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .overview-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .overview-card.total::before { background: var(--accent); }
+  .overview-card.paid::before { background: var(--green); }
+  .overview-card.left::before { background: var(--accent2); }
+  .overview-card.items::before { background: var(--muted); }
+
+  .overview-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+
+  .overview-value {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .overview-card.total .overview-value { color: var(--accent); }
+  .overview-card.paid .overview-value { color: var(--green); }
+  .overview-card.left .overview-value { color: var(--accent2); }
+
+  /* PROGRESS */
+  .progress-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+  }
+
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .progress-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .progress-pct {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--accent));
+    border-radius: 99px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Onest', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { border-color: var(--accent); color: var(--text); }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #0f0e0c; font-weight: 500; }
+
+  /* ADD ROW FORM */
+  .add-form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  @media (max-width: 700px) {
+    .add-form {
+      grid-template-columns: 1fr 1fr;
+    }
+    .add-form .btn-add { grid-column: span 2; }
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Onest', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+  }
+
+  .field select option { background: var(--surface); }
+
+  .btn-add {
+    background: var(--accent);
+    color: #0f0e0c;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: 'Onest', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+    height: 42px;
+  }
+
+  .btn-add:hover { opacity: 0.85; }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 400;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(232, 201, 126, 0.04); }
+
+  tbody td {
+    padding: 13px 16px;
+    vertical-align: middle;
+  }
+
+  .cat-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    background: var(--border);
+    color: var(--muted);
+  }
+
+  .status-paid {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--green);
+  }
+
+  .status-unpaid {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-paid .status-dot { background: var(--green); }
+  .status-unpaid .status-dot { background: var(--muted); }
+
+  .price-col {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .btn-del {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+
+  .btn-del:hover { border-color: var(--red); color: var(--red); }
+
+  .btn-toggle-paid {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'Onest', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .btn-toggle-paid:hover { border-color: var(--green); color: var(--green); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* NOTES */
+  .notes-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 40px;
+  }
+
+  .notes-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text);
+    font-family: 'Onest', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 90px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus { border-color: var(--accent); }
+
+  /* CHART */
+  .chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+  }
+
+  .chart-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .chart-bars { display: flex; flex-direction: column; gap: 10px; }
+
+  .chart-row { display: flex; align-items: center; gap: 12px; }
+  .chart-label { font-size: 12px; color: var(--muted); width: 120px; flex-shrink: 0; text-align: right; }
+  .chart-bar-outer { flex: 1; height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .chart-bar-inner {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.5s ease;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .chart-val { font-size: 12px; color: var(--text); width: 80px; flex-shrink: 0; font-family: 'Unbounded', sans-serif; font-size: 11px; }
+
+  /* EXPORT */
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 48px; }
+
+  .btn-action {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Onest', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-action.primary { background: var(--accent); border-color: var(--accent); color: #0f0e0c; font-weight: 500; }
+  .btn-action.primary:hover { opacity: 0.85; color: #0f0e0c; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.visible { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 28px 24px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+    transform: translateY(10px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.visible .modal-box { transform: translateY(0); }
+  .modal-icon { font-size: 32px; margin-bottom: 12px; }
+  .modal-title { font-family: 'Unbounded', sans-serif; font-size: 16px; margin-bottom: 8px; }
+  .modal-text { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; }
+  .modal-btn { padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: 'Onest', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+  .modal-btn:hover { border-color: var(--muted); }
+  .modal-btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
+  .modal-btn.danger:hover { opacity: 0.85; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 99px; padding: 10px 20px;
+    font-size: 13px; color: var(--text);
+    z-index: 200; opacity: 0; transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* hidden on print */
+  @media print {
+    .add-form, .tabs, .btn-del, .btn-toggle-paid, .actions, .notes-wrap, .chart-wrap { display: none; }
+    body { background: #fff; color: #000; }
+    .overview-card, .table-wrap { border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>РЕМОНТ<span>.</span></h1>
+        <div class="subtitle">Учёт расходов и планирование бюджета</div>
+      </div>
+      <div id="roomName" style="font-family:'Unbounded',sans-serif;font-size:13px;color:var(--muted);text-align:right;cursor:pointer;" title="Нажмите, чтобы изменить" onclick="editProjectName()">
+        Мой проект ✎
+      </div>
+    </div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <div class="overview">
+    <div class="overview-card total">
+      <div class="overview-label">Итого расходов</div>
+      <div class="overview-value" id="sumTotal">0 ₽</div>
+    </div>
+    <div class="overview-card paid">
+      <div class="overview-label">Оплачено</div>
+      <div class="overview-value" id="sumPaid">0 ₽</div>
+    </div>
+    <div class="overview-card left">
+      <div class="overview-label">Остаток</div>
+      <div class="overview-value" id="sumLeft">0 ₽</div>
+    </div>
+    <div class="overview-card items">
+      <div class="overview-label">Позиций</div>
+      <div class="overview-value" id="sumCount">0</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-top">
+      <span class="progress-title">Прогресс оплаты</span>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORY CHART -->
+  <div class="chart-wrap" id="chartWrap">
+    <div class="chart-title">Расходы по категориям</div>
+    <div class="chart-bars" id="chartBars"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" id="tabsEl">
+    <button class="tab active" data-cat="all" onclick="filterCat(this)">Все</button>
+    <button class="tab" data-cat="Материалы" onclick="filterCat(this)">Материалы</button>
+    <button class="tab" data-cat="Работы" onclick="filterCat(this)">Работы</button>
+    <button class="tab" data-cat="Мебель" onclick="filterCat(this)">Мебель</button>
+    <button class="tab" data-cat="Техника" onclick="filterCat(this)">Техника</button>
+    <button class="tab" data-cat="Прочее" onclick="filterCat(this)">Прочее</button>
+  </div>
+
+  <!-- ADD FORM -->
+  <div class="add-form">
+    <div class="field">
+      <label>Наименование</label>
+      <input type="text" id="inName" placeholder="Плитка, штукатурка…" />
+    </div>
+    <div class="field">
+      <label>Категория</label>
+      <select id="inCat">
+        <option>Материалы</option>
+        <option>Работы</option>
+        <option>Мебель</option>
+        <option>Техника</option>
+        <option>Прочее</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Сумма (₽)</label>
+      <input type="number" id="inPrice" placeholder="0" min="0" />
+    </div>
+    <div class="field">
+      <label>Статус</label>
+      <select id="inStatus">
+        <option value="unpaid">Не оплачено</option>
+        <option value="paid">Оплачено</option>
+      </select>
+    </div>
+    <button class="btn-add" onclick="addItem()">+ Добавить</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Наименование</th>
+          <th>Категория</th>
+          <th>Сумма</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🏗️</div>
+      <div class="empty-text">Добавьте первую позицию</div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="notes-wrap">
+    <div class="notes-label">Заметки</div>
+    <textarea id="notesEl" placeholder="Контакты подрядчиков, ссылки на товары, сроки…" oninput="saveNotes()"></textarea>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="btn-action primary" onclick="window.print()">🖨️ Распечатать</button>
+    <button class="btn-action" onclick="exportCSV()">⬇️ Экспорт CSV</button>
+    <button class="btn-action" onclick="clearAll()">🗑 Очистить всё</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Очистить всё?</div>
+    <div class="modal-text">Все позиции будут удалены.<br>Это действие нельзя отменить.</div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="closeModal()">Отмена</button>
+      <button class="modal-btn danger" onclick="confirmClear()">Удалить всё</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+let items = JSON.parse(localStorage.getItem('remont_items') || '[]');
+let activeFilter = 'all';
+let projectName = localStorage.getItem('remont_name') || 'Мой проект';
+
+document.getElementById('roomName').textContent = projectName + ' ✎';
+
+function saveItems() {
+  localStorage.setItem('remont_items', JSON.stringify(items));
+}
+
+function saveNotes() {
+  localStorage.setItem('remont_notes', document.getElementById('notesEl').value);
+}
+
+document.getElementById('notesEl').value = localStorage.getItem('remont_notes') || '';
+
+function editProjectName() {
+  const n = prompt('Название проекта:', projectName);
+  if (n && n.trim()) {
+    projectName = n.trim();
+    localStorage.setItem('remont_name', projectName);
+    document.getElementById('roomName').textContent = projectName + ' ✎';
+  }
+}
+
+function fmt(n) {
+  return n.toLocaleString('ru-RU') + ' ₽';
+}
+
+function addItem() {
+  const name = document.getElementById('inName').value.trim();
+  const cat = document.getElementById('inCat').value;
+  const price = parseFloat(document.getElementById('inPrice').value) || 0;
+  const status = document.getElementById('inStatus').value;
+  if (!name) { document.getElementById('inName').focus(); return; }
+  items.push({ id: Date.now(), name, cat, price, status });
+  saveItems();
+  document.getElementById('inName').value = '';
+  document.getElementById('inPrice').value = '';
+  render();
+}
+
+function deleteItem(id) {
+  items = items.filter(i => i.id !== id);
+  saveItems();
+  render();
+}
+
+function togglePaid(id) {
+  const item = items.find(i => i.id === id);
+  if (item) item.status = item.status === 'paid' ? 'unpaid' : 'paid';
+  saveItems();
+  render();
+}
+
+function filterCat(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = el.dataset.cat;
+  render();
+}
+
+function render() {
+  const total = items.reduce((s, i) => s + i.price, 0);
+  const paid = items.reduce((s, i) => s + (i.status === 'paid' ? i.price : 0), 0);
+  const left = total - paid;
+  const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+
+  document.getElementById('sumTotal').textContent = fmt(total);
+  document.getElementById('sumPaid').textContent = fmt(paid);
+  document.getElementById('sumLeft').textContent = fmt(left);
+  document.getElementById('sumCount').textContent = items.length;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // chart
+  const cats = ['Материалы','Работы','Мебель','Техника','Прочее'];
+  const catTotals = cats.map(c => ({ c, v: items.filter(i=>i.cat===c).reduce((s,i)=>s+i.price,0) })).filter(x=>x.v>0);
+  const maxV = catTotals.length ? Math.max(...catTotals.map(x=>x.v)) : 1;
+  const chartEl = document.getElementById('chartBars');
+  if (catTotals.length === 0) {
+    document.getElementById('chartWrap').style.display = 'none';
+  } else {
+    document.getElementById('chartWrap').style.display = '';
+    chartEl.innerHTML = catTotals.map(({c,v}) => `
+      <div class="chart-row">
+        <div class="chart-label">${c}</div>
+        <div class="chart-bar-outer"><div class="chart-bar-inner" style="width:${Math.round(v/maxV*100)}%"></div></div>
+        <div class="chart-val">${fmt(v)}</div>
+      </div>
+    `).join('');
+  }
+
+  // table
+  const filtered = activeFilter === 'all' ? items : items.filter(i => i.cat === activeFilter);
+  const body = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (filtered.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map((item, idx) => `
+      <tr>
+        <td style="color:var(--muted);font-size:12px">${idx + 1}</td>
+        <td>${item.name}</td>
+        <td><span class="cat-badge">${item.cat}</span></td>
+        <td class="price-col">${fmt(item.price)}</td>
+        <td>
+          <span class="${item.status === 'paid' ? 'status-paid' : 'status-unpaid'}">
+            <span class="status-dot"></span>
+            ${item.status === 'paid' ? 'Оплачено' : 'Не оплачено'}
+          </span>
+        </td>
+        <td style="display:flex;gap:6px;align-items:center">
+          <button class="btn-toggle-paid" onclick="togglePaid(${item.id})">
+            ${item.status === 'paid' ? '↩ Отменить' : '✓ Оплатить'}
+          </button>
+          <button class="btn-del" onclick="deleteItem(${item.id})">✕</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function exportCSV() {
+  if (!items.length) return;
+  const rows = [['#','Наименование','Категория','Сумма','Статус']];
+  items.forEach((item,i) => rows.push([i+1, item.name, item.cat, item.price, item.status === 'paid' ? 'Оплачено' : 'Не оплачено']));
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'remont.csv';
+  a.click();
+}
+
+function clearAll() {
+  if (confirm('Очистить все позиции?')) {
+    items = [];
+    saveItems();
+    render();
+  }
+}
+
+// enter to add
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.target.id === 'inName' || e.target.id === 'inPrice')) addItem();
+});
+
+render();
+</script>
+</body>
+</html>
